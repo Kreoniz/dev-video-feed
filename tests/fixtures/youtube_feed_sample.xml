@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns:yt="http://www.youtube.com/xml/schemas/2015"
+      xmlns:media="http://search.yahoo.com/mrss/"
+      xmlns="http://www.w3.org/2005/Atom">
+  <title>YouTube Videos</title>
+  <entry>
+    <id>yt:video:valid123</id>
+    <yt:videoId>valid123</yt:videoId>
+    <title>Build a React TypeScript dashboard from scratch</title>
+    <link rel="alternate" href="https://www.youtube.com/watch?v=valid123&amp;feature=youtube_gdata"/>
+    <author>
+      <name>Theo / t3.gg</name>
+    </author>
+    <published>2026-01-03T10:00:00Z</published>
+    <media:group>
+      <media:title>Build a React TypeScript dashboard from scratch</media:title>
+      <media:description>This tutorial walks through practical frontend architecture decisions for a React and TypeScript dashboard using RSS metadata only.</media:description>
+      <media:thumbnail url="https://i.ytimg.com/vi/valid123/hqdefault.jpg" width="480" height="360"/>
+    </media:group>
+  </entry>
+  <entry>
+    <id>yt:video:short123</id>
+    <yt:videoId>short123</yt:videoId>
+    <title>One CSS trick #Shorts</title>
+    <link rel="alternate" href="https://www.youtube.com/shorts/short123"/>
+    <author>
+      <name>Theo / t3.gg</name>
+    </author>
+    <published>2026-01-02T10:00:00Z</published>
+    <media:group>
+      <media:description>A very short CSS tip. #shorts</media:description>
+    </media:group>
+  </entry>
+  <entry>
+    <id>yt:video:stream123</id>
+    <yt:videoId>stream123</yt:videoId>
+    <title>Live coding stream replay</title>
+    <link rel="alternate" href="https://www.youtube.com/watch?v=stream123"/>
+    <author>
+      <name>Theo / t3.gg</name>
+    </author>
+    <published>2026-01-01T10:00:00Z</published>
+    <media:group>
+      <media:description>Full stream recording from a live coding session.</media:description>
+    </media:group>
+  </entry>
+  <entry>
+    <id>tag:youtube.com,2008:playlist:missing</id>
+    <title>Not a video item</title>
+    <link rel="alternate" href="https://example.com/blog-post"/>
+    <author>
+      <name>Theo / t3.gg</name>
+    </author>
+    <published>2025-12-31T10:00:00Z</published>
+    <media:group>
+      <media:description>This entry intentionally has no YouTube video ID.</media:description>
+    </media:group>
+  </entry>
+</feed>
+
