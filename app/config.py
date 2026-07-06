@@ -19,6 +19,11 @@ class Settings:
     http_timeout_seconds: float
     log_level: str
     feed_entries_per_channel: int
+    youtube_api_key: str | None
+    youtube_data_api_enabled: bool
+    youtube_data_api_required: bool
+    youtube_details_batch_size: int
+    min_video_duration_seconds: int
 
 
 CHANNELS: tuple[ChannelConfig, ...] = (
@@ -91,8 +96,33 @@ def _get_float(name: str, default: float, *, minimum: float = 0.0) -> float:
     return value
 
 
+def _get_bool(name: str, default: bool) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+
+    normalized = raw.strip().lower()
+    if normalized in {"1", "true", "yes", "y", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "n", "off"}:
+        return False
+
+    msg = f"{name} must be a boolean"
+    raise RuntimeError(msg)
+
+
+def _get_optional_secret(name: str) -> str | None:
+    raw = os.getenv(name)
+    if raw is None:
+        return None
+
+    value = raw.strip()
+    return value or None
+
+
 @lru_cache
 def get_settings() -> Settings:
+    youtube_details_batch_size = _get_int("YOUTUBE_DETAILS_BATCH_SIZE", 50, minimum=1)
     return Settings(
         app_name=os.getenv("APP_NAME", "dev-video-feed"),
         app_version=os.getenv("APP_VERSION", "0.1.0"),
@@ -100,6 +130,11 @@ def get_settings() -> Settings:
         http_timeout_seconds=_get_float("HTTP_TIMEOUT_SECONDS", 15.0, minimum=0.1),
         log_level=os.getenv("LOG_LEVEL", "INFO").upper(),
         feed_entries_per_channel=_get_int("FEED_ENTRIES_PER_CHANNEL", 7, minimum=1),
+        youtube_api_key=_get_optional_secret("YOUTUBE_API_KEY"),
+        youtube_data_api_enabled=_get_bool("YOUTUBE_DATA_API_ENABLED", True),
+        youtube_data_api_required=_get_bool("YOUTUBE_DATA_API_REQUIRED", False),
+        youtube_details_batch_size=min(youtube_details_batch_size, 50),
+        min_video_duration_seconds=_get_int("MIN_VIDEO_DURATION_SECONDS", 180, minimum=0),
     )
 
 

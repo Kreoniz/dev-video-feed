@@ -1,0 +1,35 @@
+{
+  "kind": "youtube#videoListResponse",
+  "items": [
+    {
+      "kind": "youtube#video",
+      "id": "valid123",
+      "snippet": {
+        "title": "Build a React TypeScript dashboard from scratch",
+        "liveBroadcastContent": "none"
+      },
+      "contentDetails": {
+        "duration": "PT12M34S"
+      },
+      "status": {
+        "uploadStatus": "processed"
+      }
+    },
+    {
+      "kind": "youtube#video",
+      "id": "live123",
+      "snippet": {
+        "title": "Live coding stream replay",
+        "liveBroadcastContent": "none"
+      },
+      "contentDetails": {
+        "duration": "PT2H4M"
+      },
+      "liveStreamingDetails": {
+        "actualStartTime": "2026-01-01T10:00:00Z",
+        "actualEndTime": "2026-01-01T12:04:00Z"
+      }
+    }
+  ]
+}
+

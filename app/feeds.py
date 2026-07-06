@@ -29,6 +29,12 @@ from app.models import (
     SkippedReason,
 )
 from app.scoring import score_video
+from app.youtube_data import (
+    YouTubeDataAPIError,
+    apply_video_details_to_results,
+    fetch_video_details,
+    format_duration,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -166,7 +172,49 @@ async def fetch_channels(
         headers=headers,
     ) as client:
         tasks = [fetch_channel(client, channel, settings) for channel in channels]
-        return await asyncio.gather(*tasks)
+        results = list(await asyncio.gather(*tasks))
+
+        if should_enrich_with_youtube_data(settings):
+            results = await enrich_channel_results(client, results, settings)
+
+        return results
+
+
+def should_enrich_with_youtube_data(settings: Settings) -> bool:
+    return settings.youtube_data_api_enabled and bool(settings.youtube_api_key)
+
+
+async def enrich_channel_results(
+    client: httpx.AsyncClient,
+    results: list[ChannelFetchResult],
+    settings: Settings,
+) -> list[ChannelFetchResult]:
+    video_ids = [video.video_id for result in results for video in result.videos]
+    if not video_ids:
+        return results
+
+    try:
+        details = await fetch_video_details(client, video_ids, settings)
+    except YouTubeDataAPIError as exc:
+        logger.warning(
+            "youtube_data_enrichment_failed",
+            extra={
+                "event": "youtube_data_enrichment_failed",
+                "error": str(exc),
+                "required": settings.youtube_data_api_required,
+            },
+        )
+        if settings.youtube_data_api_required:
+            return [
+                _failed_channel(
+                    ChannelConfig(name=result.channel, rss_url="YouTube Data API"),
+                    str(exc),
+                )
+                for result in results
+            ]
+        return results
+
+    return apply_video_details_to_results(results, details)
 
 
 async def fetch_channel(
@@ -248,7 +296,7 @@ async def fetch_channel(
     )
 
 
-def build_feed_response(results: list[ChannelFetchResult]) -> FeedResponse:
+def build_feed_response(results: list[ChannelFetchResult], settings: Settings) -> FeedResponse:
     generated_at = utc_now()
     checked = [result.channel for result in results]
     failures = [result.failure for result in results if result.failure is not None]
@@ -267,7 +315,10 @@ def build_feed_response(results: list[ChannelFetchResult]) -> FeedResponse:
         skipped.extend(result.skipped)
 
     for video in videos:
-        reason = get_skip_reason(video)
+        reason = get_skip_reason(
+            video,
+            min_video_duration_seconds=settings.min_video_duration_seconds,
+        )
         if reason is not None:
             skipped.append(_skip(video, reason))
             continue
@@ -315,6 +366,9 @@ def build_sample_response(results: list[ChannelFetchResult], *, limit: int = 3) 
                 description_snippet=description_snippet(video.description),
                 channel=video.channel,
                 thumbnail=video.thumbnail,
+                duration=format_duration(video.duration_seconds),
+                duration_seconds=video.duration_seconds,
+                duration_iso=video.duration_iso,
             )
             for video in videos
         ],
@@ -369,8 +423,10 @@ def _to_feed_item(video: ParsedVideo) -> FeedItem:
         description=video.description,
         description_snippet=description_snippet(video.description),
         thumbnail=video.thumbnail,
-        duration="Unknown",
-        source="YouTube RSS",
+        duration=format_duration(video.duration_seconds),
+        duration_seconds=video.duration_seconds,
+        duration_iso=video.duration_iso,
+        source="YouTube RSS + YouTube Data API" if video.youtube_data_enriched else "YouTube RSS",
         confidence=infer_confidence(video),
         topics=topics,
         priority=priority,

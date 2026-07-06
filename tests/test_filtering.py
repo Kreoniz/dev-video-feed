@@ -11,6 +11,9 @@ def make_video(
     url: str = "https://www.youtube.com/watch?v=abc123",
     source_url: str | None = None,
     video_id: str = "abc123",
+    duration_seconds: int | None = None,
+    live_broadcast_content: str | None = None,
+    has_live_streaming_details: bool = False,
 ) -> ParsedVideo:
     return ParsedVideo(
         video_id=video_id,
@@ -20,6 +23,9 @@ def make_video(
         published=datetime(2026, 1, 1, tzinfo=UTC),
         channel="Example",
         description=description,
+        duration_seconds=duration_seconds,
+        live_broadcast_content=live_broadcast_content,
+        has_live_streaming_details=has_live_streaming_details,
     )
 
 
@@ -51,3 +57,21 @@ def test_accepts_normal_youtube_watch_url() -> None:
     video = make_video()
 
     assert get_skip_reason(video) is None
+
+
+def test_skips_short_duration_when_metadata_is_available() -> None:
+    video = make_video(duration_seconds=59)
+
+    assert get_skip_reason(video, min_video_duration_seconds=180) == SkippedReason.SHORT
+
+
+def test_skips_live_broadcast_metadata() -> None:
+    video = make_video(live_broadcast_content="live")
+
+    assert get_skip_reason(video) == SkippedReason.STREAM
+
+
+def test_skips_completed_live_streaming_metadata() -> None:
+    video = make_video(has_live_streaming_details=True)
+
+    assert get_skip_reason(video) == SkippedReason.STREAM

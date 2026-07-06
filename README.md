@@ -6,7 +6,7 @@ This service only reads YouTube RSS XML. It does not scrape YouTube HTML and it 
 
 ## Overview
 
-`dev-video-feed` fetches configured YouTube RSS feeds, parses the latest entries, filters out Shorts, streams, clips, VODs, podcasts, and non-video items, deduplicates by video ID and URL, then returns deterministic metadata, topics, priority, score, summary, and practical value notes.
+`dev-video-feed` fetches configured YouTube RSS feeds, parses the latest entries, enriches those video IDs with YouTube Data API metadata when configured, filters out Shorts, streams, clips, VODs, podcasts, and non-video items, deduplicates by video ID and URL, then returns deterministic metadata, duration, topics, priority, score, summary, and practical value notes.
 
 Configured channels:
 
@@ -34,10 +34,13 @@ defusedxml Atom parser
       v
 normalized ParsedVideo models
       |
+      v
+optional YouTube Data API videos.list enrichment
+      |
       +--> missing IDs / channel failures
       |
       v
-filtering -> dedupe -> classification -> scoring
+filtering with duration/live metadata -> dedupe -> classification -> scoring
       |
       v
 FastAPI endpoints: /health, /sample, /feed.json, optional /feed.xml
@@ -74,7 +77,16 @@ CACHE_TTL_SECONDS=900
 HTTP_TIMEOUT_SECONDS=15
 LOG_LEVEL=INFO
 FEED_ENTRIES_PER_CHANNEL=7
+YOUTUBE_API_KEY=
+YOUTUBE_DATA_API_ENABLED=true
+YOUTUBE_DATA_API_REQUIRED=false
+YOUTUBE_DETAILS_BATCH_SIZE=50
+MIN_VIDEO_DURATION_SECONDS=180
 ```
+
+`YOUTUBE_API_KEY` enables duration and live-stream metadata enrichment through the YouTube Data API v3 `videos.list` endpoint. Keep this value in `.env` on your machine or VPS; do not commit it.
+
+If `YOUTUBE_DATA_API_ENABLED=true` but no key is present, the app falls back to RSS-only behavior and returns `"duration": "Unknown"`. `MIN_VIDEO_DURATION_SECONDS` skips very short videos when API duration metadata is available.
 
 ## Local Development
 
@@ -281,7 +293,6 @@ journalctl -u caddy -f
 docker compose logs -f
 ```
 
-## Notes for Future Extension
+## Duration Metadata
 
-Duration and live metadata are intentionally not guessed from RSS. Items currently use `"duration": "Unknown"`. The parsing and classification modules are small pure functions so YouTube Data API metadata can be added later without changing the public JSON shape.
-
+Duration and live metadata are intentionally not guessed from RSS. When `YOUTUBE_API_KEY` is configured, the service enriches RSS-discovered video IDs with YouTube Data API duration and live broadcast metadata. Without that key, duration remains `"Unknown"` because RSS does not reliably include duration.

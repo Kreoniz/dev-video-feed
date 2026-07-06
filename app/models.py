@@ -60,6 +60,11 @@ class ParsedVideo(CamelModel):
     channel: str
     description: str
     thumbnail: str | None = None
+    duration_iso: str | None = Field(default=None, alias="durationIso")
+    duration_seconds: int | None = Field(default=None, alias="durationSeconds")
+    youtube_data_enriched: bool = Field(default=False, alias="youtubeDataEnriched")
+    live_broadcast_content: str | None = Field(default=None, alias="liveBroadcastContent")
+    has_live_streaming_details: bool = Field(default=False, alias="hasLiveStreamingDetails")
 
 
 class SampleItem(CamelModel):
@@ -70,6 +75,9 @@ class SampleItem(CamelModel):
     description_snippet: str = Field(alias="descriptionSnippet")
     channel: str
     thumbnail: str | None = None
+    duration: str = "Unknown"
+    duration_seconds: int | None = Field(default=None, alias="durationSeconds")
+    duration_iso: str | None = Field(default=None, alias="durationIso")
 
 
 class FeedItem(CamelModel):
@@ -82,6 +90,8 @@ class FeedItem(CamelModel):
     description_snippet: str = Field(alias="descriptionSnippet")
     thumbnail: str | None = None
     duration: str = "Unknown"
+    duration_seconds: int | None = Field(default=None, alias="durationSeconds")
+    duration_iso: str | None = Field(default=None, alias="durationIso")
     source: str = "YouTube RSS"
     confidence: Confidence
     topics: list[str]

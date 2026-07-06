@@ -153,7 +153,11 @@ async def _get_feed_response(
     cache: TTLCache,
     force: bool,
 ) -> FeedResponse:
-    cache_key = f"feed:v1:{settings.feed_entries_per_channel}"
+    cache_key = (
+        f"feed:v2:{settings.feed_entries_per_channel}:"
+        f"ytdata={settings.youtube_data_api_enabled and bool(settings.youtube_api_key)}:"
+        f"min_duration={settings.min_video_duration_seconds}"
+    )
     if not force:
         cached = await cache.get(cache_key)
         if isinstance(cached, FeedResponse):
@@ -164,7 +168,7 @@ async def _get_feed_response(
             return cached
 
     results = await fetch_channels(CHANNELS, settings)
-    response = build_feed_response(results)
+    response = build_feed_response(results, settings)
     _raise_if_all_channels_failed(response)
     await cache.set(cache_key, response)
     return response
@@ -176,7 +180,10 @@ async def _get_sample_response(
     cache: TTLCache,
     force: bool,
 ) -> SampleResponse:
-    cache_key = f"sample:v1:{settings.feed_entries_per_channel}"
+    cache_key = (
+        f"sample:v2:{settings.feed_entries_per_channel}:"
+        f"ytdata={settings.youtube_data_api_enabled and bool(settings.youtube_api_key)}"
+    )
     if not force:
         cached = await cache.get(cache_key)
         if isinstance(cached, SampleResponse):

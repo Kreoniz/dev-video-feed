@@ -19,7 +19,11 @@ STREAM_RE = re.compile(
 )
 
 
-def get_skip_reason(video: ParsedVideo) -> SkippedReason | None:
+def get_skip_reason(
+    video: ParsedVideo,
+    *,
+    min_video_duration_seconds: int = 0,
+) -> SkippedReason | None:
     if not video.video_id:
         return SkippedReason.MISSING_VIDEO_ID
 
@@ -31,6 +35,13 @@ def get_skip_reason(video: ParsedVideo) -> SkippedReason | None:
 
     if is_stream(video):
         return SkippedReason.STREAM
+
+    if (
+        min_video_duration_seconds > 0
+        and video.duration_seconds is not None
+        and video.duration_seconds < min_video_duration_seconds
+    ):
+        return SkippedReason.SHORT
 
     return None
 
@@ -56,6 +67,12 @@ def is_short(video: ParsedVideo) -> bool:
 
 
 def is_stream(video: ParsedVideo) -> bool:
+    if video.live_broadcast_content in {"live", "upcoming"}:
+        return True
+
+    if video.has_live_streaming_details:
+        return True
+
     return bool(STREAM_RE.search(_metadata_text(video)))
 
 
