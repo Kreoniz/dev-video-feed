@@ -7,8 +7,8 @@ from datetime import UTC, datetime
 from typing import Annotated, Any
 from xml.sax.saxutils import escape
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Request, status
-from fastapi.responses import Response
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, status
+from fastapi.responses import Response as RawResponse
 
 from app.cache import TTLCache
 from app.config import CHANNELS, Settings, get_sample_channels, get_settings
@@ -19,6 +19,13 @@ from app.feeds import (
     fetch_channels,
 )
 from app.models import FeedResponse, HealthResponse, SampleResponse
+
+NO_STORE_HEADERS = {
+    "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+    "Pragma": "no-cache",
+    "Expires": "0",
+    "Content-Type": "application/json; charset=utf-8",
+}
 
 
 class JsonLogFormatter(logging.Formatter):
@@ -109,6 +116,11 @@ CacheDep = Annotated[TTLCache, Depends(request_cache)]
 ForceQuery = Annotated[bool, Query()]
 
 
+def apply_no_store_headers(response: Response) -> None:
+    for name, value in NO_STORE_HEADERS.items():
+        response.headers[name] = value
+
+
 @app.get("/health", response_model=HealthResponse)
 async def health(settings: SettingsDep) -> HealthResponse:
     return HealthResponse(
@@ -121,30 +133,34 @@ async def health(settings: SettingsDep) -> HealthResponse:
 
 @app.get("/feed.json", response_model=FeedResponse)
 async def feed_json(
+    response: Response,
     settings: SettingsDep,
     cache: CacheDep,
     force: ForceQuery = False,
 ) -> FeedResponse:
+    apply_no_store_headers(response)
     return await _get_feed_response(settings=settings, cache=cache, force=force)
 
 
 @app.get("/sample", response_model=SampleResponse)
 async def sample(
+    response: Response,
     settings: SettingsDep,
     cache: CacheDep,
     force: ForceQuery = False,
 ) -> SampleResponse:
+    apply_no_store_headers(response)
     return await _get_sample_response(settings=settings, cache=cache, force=force)
 
 
-@app.get("/feed.xml", response_class=Response)
+@app.get("/feed.xml", response_class=RawResponse)
 async def feed_xml(
     settings: SettingsDep,
     cache: CacheDep,
     force: ForceQuery = False,
-) -> Response:
+) -> RawResponse:
     feed = await _get_feed_response(settings=settings, cache=cache, force=force)
-    return Response(content=_render_rss(feed, settings), media_type="application/rss+xml")
+    return RawResponse(content=_render_rss(feed, settings), media_type="application/rss+xml")
 
 
 async def _get_feed_response(
