@@ -2,13 +2,16 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Mapping
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from typing import Annotated, Any
 from xml.sax.saxutils import escape
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, status
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, status
+from fastapi.responses import JSONResponse
 from fastapi.responses import Response as RawResponse
+from starlette.background import BackgroundTask
 
 from app.cache import TTLCache
 from app.config import CHANNELS, Settings, get_sample_channels, get_settings
@@ -20,12 +23,34 @@ from app.feeds import (
 )
 from app.models import FeedResponse, HealthResponse, SampleResponse
 
-NO_STORE_HEADERS = {
+NO_STORE_CACHE_HEADERS = {
     "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
     "Pragma": "no-cache",
     "Expires": "0",
-    "Content-Type": "application/json; charset=utf-8",
 }
+NO_STORE_JSON_CONTENT_TYPE = "application/json; charset=utf-8"
+
+
+class NoStoreJSONResponse(JSONResponse):
+    media_type = NO_STORE_JSON_CONTENT_TYPE
+
+    def __init__(
+        self,
+        content: Any,
+        status_code: int = 200,
+        headers: Mapping[str, str] | None = None,
+        media_type: str | None = None,
+        background: BackgroundTask | None = None,
+    ) -> None:
+        response_headers = dict(headers or {})
+        response_headers.update(NO_STORE_CACHE_HEADERS)
+        super().__init__(
+            content=content,
+            status_code=status_code,
+            headers=response_headers,
+            media_type=media_type,
+            background=background,
+        )
 
 
 class JsonLogFormatter(logging.Formatter):
@@ -116,11 +141,6 @@ CacheDep = Annotated[TTLCache, Depends(request_cache)]
 ForceQuery = Annotated[bool, Query()]
 
 
-def apply_no_store_headers(response: Response) -> None:
-    for name, value in NO_STORE_HEADERS.items():
-        response.headers[name] = value
-
-
 @app.get("/health", response_model=HealthResponse)
 async def health(settings: SettingsDep) -> HealthResponse:
     return HealthResponse(
@@ -131,25 +151,29 @@ async def health(settings: SettingsDep) -> HealthResponse:
     )
 
 
-@app.get("/feed.json", response_model=FeedResponse)
+@app.get(
+    "/feed.json",
+    response_model=FeedResponse,
+    response_class=NoStoreJSONResponse,
+)
 async def feed_json(
-    response: Response,
     settings: SettingsDep,
     cache: CacheDep,
     force: ForceQuery = False,
 ) -> FeedResponse:
-    apply_no_store_headers(response)
     return await _get_feed_response(settings=settings, cache=cache, force=force)
 
 
-@app.get("/sample", response_model=SampleResponse)
+@app.get(
+    "/sample",
+    response_model=SampleResponse,
+    response_class=NoStoreJSONResponse,
+)
 async def sample(
-    response: Response,
     settings: SettingsDep,
     cache: CacheDep,
     force: ForceQuery = False,
 ) -> SampleResponse:
-    apply_no_store_headers(response)
     return await _get_sample_response(settings=settings, cache=cache, force=force)
 
 

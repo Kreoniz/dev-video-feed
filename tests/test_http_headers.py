@@ -1,12 +1,13 @@
-from fastapi import Response
+from app.main import (
+    NO_STORE_CACHE_HEADERS,
+    NO_STORE_JSON_CONTENT_TYPE,
+    NoStoreJSONResponse,
+)
 
-from app.main import NO_STORE_HEADERS, apply_no_store_headers
 
+def test_no_store_json_response_sets_expected_headers() -> None:
+    response = NoStoreJSONResponse({"ok": True})
 
-def test_apply_no_store_headers_sets_expected_json_cache_headers() -> None:
-    response = Response()
-
-    apply_no_store_headers(response)
-
-    for name, value in NO_STORE_HEADERS.items():
+    for name, value in NO_STORE_CACHE_HEADERS.items():
         assert response.headers[name] == value
+    assert response.headers["content-type"] == NO_STORE_JSON_CONTENT_TYPE
